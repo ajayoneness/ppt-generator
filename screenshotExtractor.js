@@ -91,21 +91,51 @@ async function extractYouTubeScreenshots(videoUrl, count = 4, onProgress = null)
     url.searchParams.set("mute", "1");
 
     console.log("[Screenshot] Loading YouTube page...");
-    await page.goto(url.toString(), { waitUntil: "networkidle2", timeout: 60000 });
+    await page.goto(url.toString(), { waitUntil: "domcontentloaded", timeout: 60000 });
 
-    // Dismiss cookie/consent banner if present
-    try {
-      const consentBtn = await page.$('button[aria-label*="Accept"], form[action*="consent"] button');
-      if (consentBtn) {
-        await consentBtn.click();
-        await page.waitForTimeout(1500);
-      }
-    } catch (_) {}
+    // Wait a bit for JS to run
+    await new Promise(r => setTimeout(r, 3000));
 
-    // Wait for the video element to appear and be ready
-    await page.waitForSelector("video", { timeout: 20000 });
+    // Dismiss cookie/consent/age-gate banners — try multiple selectors
+    for (const sel of [
+      'button[aria-label*="Accept all"]',
+      'button[aria-label*="Accept All"]',
+      'button[aria-label*="accept"]',
+      'form[action*="consent"] button',
+      'button.yt-spec-button-shape-next[aria-label*="ccept"]',
+      '#dialog button',
+      'tp-yt-paper-button[aria-label*="ccept"]',
+    ]) {
+      try {
+        const btn = await page.$(sel);
+        if (btn) {
+          await btn.click();
+          console.log(`[Screenshot] Dismissed consent banner via: ${sel}`);
+          await new Promise(r => setTimeout(r, 2000));
+          break;
+        }
+      } catch (_) {}
+    }
 
-    // Get video duration from the player
+    // Wait for the video element to appear
+    await page.waitForSelector("video", { timeout: 30000 });
+
+    // Click play to trigger media load
+    await page.evaluate(() => {
+      const v = document.querySelector("video");
+      if (v) v.play().catch(() => {});
+    });
+
+    // Wait until video.duration is a valid finite number (not NaN / 0)
+    console.log("[Screenshot] Waiting for video duration to load...");
+    await page.waitForFunction(
+      () => {
+        const v = document.querySelector("video");
+        return v && isFinite(v.duration) && v.duration > 10;
+      },
+      { timeout: 30000 }
+    );
+
     const durationSecs = await page.evaluate(() => {
       const v = document.querySelector("video");
       return v ? v.duration : 0;
@@ -117,12 +147,7 @@ async function extractYouTubeScreenshots(videoUrl, count = 4, onProgress = null)
 
     console.log(`[Screenshot] Video duration: ${durationSecs.toFixed(1)}s`);
 
-    // Click play if paused (to ensure video initialises fully)
-    await page.evaluate(() => {
-      const v = document.querySelector("video");
-      if (v && v.paused) v.play();
-    });
-    await new Promise(r => setTimeout(r, 2000)); // let it start
+    await new Promise(r => setTimeout(r, 1000)); // brief settle
 
     const timestamps = pickTimestamps(durationSecs, count);
     console.log(`[Screenshot] Timestamps: ${timestamps.map(t => t.toFixed(1) + "s").join(", ")}`);
