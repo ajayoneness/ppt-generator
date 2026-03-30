@@ -15,18 +15,17 @@ function extractVideoId(url) {
 }
 
 /**
- * Fetch a YouTube thumbnail URL and return as base64 PNG string for pptxgenjs.
- * Returns null if fetch fails.
+ * Fetch a single YouTube thumbnail URL → base64 PNG for pptxgenjs.
+ * minSize: minimum byte size to accept (filters out YouTube's grey "missing" placeholder ~1.2KB)
  */
-async function fetchThumbnail(thumbUrl) {
+async function fetchThumbnail(thumbUrl, minSize = 1500) {
   try {
     const resp = await axios.get(thumbUrl, {
       responseType: "arraybuffer",
       timeout: 15000,
       headers: { "User-Agent": "Mozilla/5.0" },
     });
-    // YouTube returns a tiny 120x90 placeholder for missing thumbnails — skip those
-    if (resp.data.byteLength < 5000) return null;
+    if (resp.data.byteLength < minSize) return null;
 
     const resized = await sharp(Buffer.from(resp.data))
       .resize(960, undefined, { fit: "inside" })
@@ -40,16 +39,17 @@ async function fetchThumbnail(thumbUrl) {
 }
 
 /**
- * Extract 4 frame thumbnails from a YouTube video using YouTube's thumbnail API.
- * YouTube auto-generates thumbnails at 4 points in every video:
- *   /vi/{id}/1.jpg  (start quarter)
- *   /vi/{id}/2.jpg  (mid quarter)
- *   /vi/{id}/3.jpg  (end quarter)
- *   /vi/{id}/maxresdefault.jpg  (main thumbnail)
+ * Extract 4 thumbnails from a YouTube video using YouTube's public thumbnail CDN.
  *
- * This works on any VPS with no browser needed — pure HTTP fetch.
- * Returns array of "image/png;base64,..." strings (null entries for failures).
- * Returns null if all 4 fail entirely.
+ * Priority per slot:
+ *  Slot 0 → maxresdefault (1280×720) → sddefault (640×480) → hqdefault (480×360)
+ *  Slot 1 → 1.jpg (frame ~25% in)    → hqdefault fallback
+ *  Slot 2 → 2.jpg (frame ~50% in)    → sddefault fallback
+ *  Slot 3 → 3.jpg (frame ~75% in)    → mqdefault fallback
+ *
+ * All fetched via plain HTTPS — no browser, works on any VPS.
+ * Returns array of "image/png;base64,..." strings (null for failures).
+ * Returns null only if every single slot fails.
  */
 async function extractYouTubeScreenshots(videoUrl, count = 4, onProgress = null) {
   const videoId = extractVideoId(videoUrl);
@@ -61,26 +61,29 @@ async function extractYouTubeScreenshots(videoUrl, count = 4, onProgress = null)
 
   console.log(`[Screenshot] Fetching thumbnails for video ID: ${videoId}`);
 
-  // YouTube's auto-generated frame thumbnails (spread across the video timeline)
-  const thumbUrls = [
-    `https://img.youtube.com/vi/${videoId}/1.jpg`,       // ~25% into video
-    `https://img.youtube.com/vi/${videoId}/2.jpg`,       // ~50% into video
-    `https://img.youtube.com/vi/${videoId}/3.jpg`,       // ~75% into video
-    `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`, // main thumbnail
+  const base = `https://img.youtube.com/vi/${videoId}`;
+
+  // Each slot: ordered list of URLs to try until one succeeds
+  const slots = [
+    [`${base}/maxresdefault.jpg`, `${base}/sddefault.jpg`, `${base}/hqdefault.jpg`],
+    [`${base}/1.jpg`,             `${base}/hqdefault.jpg`, `${base}/mqdefault.jpg`],
+    [`${base}/2.jpg`,             `${base}/sddefault.jpg`, `${base}/mqdefault.jpg`],
+    [`${base}/3.jpg`,             `${base}/hqdefault.jpg`, `${base}/mqdefault.jpg`],
   ];
 
   const base64Images = [];
 
-  for (let i = 0; i < Math.min(count, thumbUrls.length); i++) {
-    const img = await fetchThumbnail(thumbUrls[i]);
-
-    // If maxresdefault fails, try hqdefault as fallback
-    const result = img || (i === 3 ? await fetchThumbnail(`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`) : null);
+  for (let i = 0; i < Math.min(count, slots.length); i++) {
+    let result = null;
+    for (const url of slots[i]) {
+      result = await fetchThumbnail(url, 1500);
+      if (result) break;
+    }
 
     if (result) {
       console.log(`[Screenshot] Thumbnail ${i + 1}/${count} fetched`);
     } else {
-      console.warn(`[Screenshot] Thumbnail ${i + 1}/${count} failed`);
+      console.warn(`[Screenshot] Thumbnail ${i + 1}/${count} failed (all fallbacks exhausted)`);
     }
 
     base64Images.push(result);
