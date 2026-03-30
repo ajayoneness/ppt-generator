@@ -1,0 +1,21 @@
+{
+  "name": "ai-ppt-generator",
+  "version": "1.0.0",
+  "description": "AI-powered PPT generator using Groq API + pptxgenjs",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.5",
+    "express": "^4.18.2",
+    "multer": "^1.4.5-lts.1",
+    "pptxgenjs": "^3.12.0",
+    "puppeteer": "^24.40.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-icons": "^5.0.1",
+    "sharp": "^0.33.2"
+  }
+}

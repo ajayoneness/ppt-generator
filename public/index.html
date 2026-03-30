@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AI PPT Generator</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f1117;--surface:#16192400;--card:#1a1d27;--border:#2a2d3e;
+  --accent:#7c5cfc;--accent2:#f5a623;--text:#e8eaf0;--muted:#8890a4;
+  --success:#4caf7d;--error:#ef5350;--warn:#f5a623;--r:10px;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;font-size:14px}
+
+/* ── Page transitions ── */
+.page{display:none}.page.active{display:flex}
+
+/* ═══════════════ LOGIN ═══════════════ */
+#loginPage{
+  min-height:100vh;align-items:center;justify-content:center;
+  background:radial-gradient(ellipse at 40% 40%,#1a1540 0%,var(--bg) 70%);
+}
+.login-box{
+  background:var(--card);border:1px solid var(--border);border-radius:16px;
+  padding:2.5rem 2rem;width:100%;max-width:380px;
+  box-shadow:0 24px 64px rgba(0,0,0,.5);
+}
+.login-logo{text-align:center;margin-bottom:2rem}
+.login-logo .icon{font-size:2.5rem;display:block;margin-bottom:.5rem}
+.login-logo h1{font-size:1.5rem;font-weight:800;
+  background:linear-gradient(135deg,#7c5cfc,#f5a623);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.login-logo p{color:var(--muted);font-size:.85rem;margin-top:.3rem}
+.login-mode-label{
+  text-align:center;font-size:.8rem;font-weight:600;letter-spacing:.5px;
+  text-transform:uppercase;color:var(--muted);margin-bottom:1.2rem;
+  padding:.4rem 1rem;background:rgba(124,92,252,.08);border-radius:6px;
+}
+.form-field{margin-bottom:1.1rem}
+.form-field label{display:block;font-size:.85rem;font-weight:600;margin-bottom:.4rem;color:var(--text)}
+.form-field input{
+  width:100%;background:#12141e;border:1px solid var(--border);border-radius:8px;
+  color:var(--text);font-size:.95rem;padding:.65rem .9rem;outline:none;transition:border-color .2s;
+}
+.form-field input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(124,92,252,.12)}
+.btn-primary{
+  width:100%;padding:.75rem;border:none;border-radius:8px;
+  background:linear-gradient(135deg,#7c5cfc,#5b3fd4);color:#fff;
+  font-size:1rem;font-weight:700;cursor:pointer;transition:opacity .2s,transform .1s;
+}
+.btn-primary:hover{opacity:.9;transform:translateY(-1px)}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.login-switch{text-align:center;margin-top:1rem;font-size:.83rem;color:var(--muted)}
+.login-switch a{color:var(--accent);text-decoration:none;font-weight:600;cursor:pointer}
+.login-switch a:hover{text-decoration:underline}
+.login-error{
+  background:rgba(239,83,80,.1);border:1px solid rgba(239,83,80,.3);
+  color:#ef9a9a;border-radius:7px;padding:.6rem .8rem;font-size:.85rem;
+  margin-bottom:1rem;display:none;
+}
+.login-error.show{display:block}
+
+/* ═══════════════ APP SHELL ═══════════════ */
+#appPage{flex-direction:column;min-height:100vh}
+
+/* Top navbar */
+.navbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:.75rem 1.5rem;background:#13151f;border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:100;
+}
+.navbar-brand{
+  font-size:1.1rem;font-weight:800;
+  background:linear-gradient(135deg,#7c5cfc,#f5a623);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  text-decoration:none;
+}
+.navbar-nav{display:flex;align-items:center;gap:.25rem}
+.nav-btn{
+  display:flex;align-items:center;gap:.4rem;
+  padding:.45rem .85rem;border:none;border-radius:7px;
+  background:transparent;color:var(--muted);font-size:.85rem;font-weight:600;
+  cursor:pointer;transition:all .18s;text-decoration:none;
+}
+.nav-btn:hover{background:rgba(255,255,255,.06);color:var(--text)}
+.nav-btn.active{background:rgba(124,92,252,.15);color:#a78bfa}
+.nav-btn svg,.nav-btn span{pointer-events:none}
+.navbar-right{display:flex;align-items:center;gap:.5rem}
+.user-chip{
+  display:flex;align-items:center;gap:.5rem;
+  padding:.35rem .75rem;background:rgba(255,255,255,.04);
+  border:1px solid var(--border);border-radius:999px;font-size:.82rem;color:var(--muted);
+}
+.user-chip .avatar{
+  width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#7c5cfc,#f5a623);
+  display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;color:#fff;
+}
+.logout-btn{
+  padding:.4rem .7rem;border:none;border-radius:7px;
+  background:transparent;color:var(--muted);cursor:pointer;font-size:.85rem;transition:all .18s;
+}
+.logout-btn:hover{background:rgba(239,83,80,.1);color:#ef9a9a}
+
+/* Content area */
+.app-content{flex:1;padding:1.5rem;max-width:1200px;margin:0 auto;width:100%}
+
+/* Views */
+.view{display:none}.view.active{display:block}
+
+/* ── View header ── */
+.view-header{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:1.5rem;flex-wrap:wrap;gap:.75rem;
+}
+.view-header h2{font-size:1.4rem;font-weight:700}
+.view-header p{color:var(--muted);font-size:.85rem;margin-top:.2rem}
+.btn-new{
+  display:flex;align-items:center;gap:.5rem;
+  padding:.6rem 1.1rem;border:none;border-radius:8px;
+  background:linear-gradient(135deg,#7c5cfc,#5b3fd4);color:#fff;
+  font-size:.88rem;font-weight:700;cursor:pointer;transition:opacity .2s,transform .1s;
+  white-space:nowrap;
+}
+.btn-new:hover{opacity:.9;transform:translateY(-1px)}
+
+/* ── Jobs grid ── */
+.jobs-grid{
+  display:grid;gap:1rem;
+  grid-template-columns:repeat(auto-fill,minmax(290px,1fr));
+}
+.empty-state{
+  grid-column:1/-1;text-align:center;padding:4rem 2rem;color:var(--muted);
+}
+.empty-state .es-icon{font-size:3rem;margin-bottom:.75rem;opacity:.4}
+.empty-state h3{font-size:1rem;margin-bottom:.5rem;color:var(--text);opacity:.6}
+.empty-state p{font-size:.85rem}
+
+/* ── Job card ── */
+.job-card{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+  padding:1.1rem;display:flex;flex-direction:column;gap:.7rem;
+  transition:border-color .2s;position:relative;
+}
+.job-card:hover{border-color:#3d4160}
+.job-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:.5rem}
+.job-title{font-size:.95rem;font-weight:700;line-height:1.3;flex:1;word-break:break-word}
+.job-delete{
+  background:transparent;border:none;color:var(--muted);cursor:pointer;
+  font-size:.9rem;padding:.2rem .4rem;border-radius:5px;flex-shrink:0;transition:all .15s;
+}
+.job-delete:hover{background:rgba(239,83,80,.1);color:#ef9a9a}
+.job-meta{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+.theme-chip{
+  display:inline-flex;align-items:center;gap:.35rem;
+  padding:.2rem .6rem;border-radius:999px;font-size:.72rem;font-weight:600;
+  background:rgba(124,92,252,.1);border:1px solid rgba(124,92,252,.25);color:#a78bfa;
+}
+.theme-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+
+/* Progress bar */
+.progress-wrap{display:flex;align-items:center;gap:.6rem}
+.progress-bar{flex:1;height:6px;background:rgba(255,255,255,.07);border-radius:999px;overflow:hidden}
+.progress-fill{height:100%;border-radius:999px;transition:width .4s ease;
+  background:linear-gradient(90deg,#7c5cfc,#a78bfa)}
+.progress-fill.complete{background:linear-gradient(90deg,#4caf7d,#66bb6a)}
+.progress-fill.error{background:linear-gradient(90deg,#ef5350,#ef9a9a)}
+.progress-pct{font-size:.78rem;font-weight:700;color:var(--muted);min-width:32px;text-align:right}
+.progress-msg{font-size:.8rem;color:var(--muted);min-height:1.1em;line-height:1.4}
+
+/* Status badge */
+.status-badge{
+  display:inline-flex;align-items:center;gap:.3rem;
+  padding:.2rem .65rem;border-radius:999px;font-size:.72rem;font-weight:700;
+}
+.status-running{background:rgba(124,92,252,.12);border:1px solid rgba(124,92,252,.3);color:#a78bfa}
+.status-complete{background:rgba(76,175,125,.12);border:1px solid rgba(76,175,125,.3);color:#4caf7d}
+.status-error{background:rgba(239,83,80,.12);border:1px solid rgba(239,83,80,.3);color:#ef9a9a}
+.status-pending{background:rgba(245,166,35,.1);border:1px solid rgba(245,166,35,.25);color:#f5a623}
+
+.job-footer{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.4rem}
+.time-ago{font-size:.75rem;color:var(--muted)}
+
+/* Download button inside card */
+.btn-download{
+  width:100%;padding:.6rem;border:1px solid rgba(76,175,125,.3);border-radius:8px;
+  background:rgba(76,175,125,.08);color:#4caf7d;font-size:.85rem;font-weight:700;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;gap:.4rem;
+  transition:all .18s;
+}
+.btn-download:hover{background:rgba(76,175,125,.15);border-color:rgba(76,175,125,.5)}
+.btn-download.hidden{display:none}
+
+/* Spinner on running cards */
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinner{
+  width:14px;height:14px;border:2px solid rgba(167,139,250,.25);
+  border-top-color:#a78bfa;border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0;
+}
+
+/* ═══════════════ MODAL ═══════════════ */
+.modal-overlay{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);
+  z-index:200;align-items:center;justify-content:center;padding:1rem;
+}
+.modal-overlay.open{display:flex}
+.modal{
+  background:#1a1d27;border:1px solid var(--border);border-radius:14px;
+  width:100%;max-width:600px;max-height:90vh;overflow-y:auto;
+  box-shadow:0 32px 80px rgba(0,0,0,.6);
+}
+.modal-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:1.25rem 1.5rem;border-bottom:1px solid var(--border);position:sticky;top:0;
+  background:#1a1d27;z-index:1;
+}
+.modal-header h3{font-size:1.05rem;font-weight:700}
+.modal-close{
+  background:transparent;border:none;color:var(--muted);cursor:pointer;
+  font-size:1.2rem;padding:.2rem .5rem;border-radius:6px;transition:all .15s;
+}
+.modal-close:hover{background:rgba(255,255,255,.06);color:var(--text)}
+.modal-body{padding:1.5rem}
+.modal-footer{
+  padding:1rem 1.5rem;border-top:1px solid var(--border);
+  display:flex;justify-content:flex-end;gap:.75rem;
+}
+
+/* Form elements (modal) */
+.field{margin-bottom:1.2rem}
+.field label{display:block;font-size:.85rem;font-weight:600;margin-bottom:.4rem}
+.field label .opt{color:var(--muted);font-weight:400;font-size:.78rem;margin-left:.3rem}
+.field input,.field textarea,.field select{
+  width:100%;background:#12141e;border:1px solid var(--border);border-radius:8px;
+  color:var(--text);font-size:.9rem;font-family:inherit;padding:.65rem .9rem;outline:none;transition:border-color .2s;
+}
+.field input:focus,.field textarea:focus,.field select:focus{
+  border-color:var(--accent);box-shadow:0 0 0 3px rgba(124,92,252,.1)}
+.field textarea{resize:vertical;min-height:100px;line-height:1.5}
+.char-count{font-size:.75rem;color:var(--muted);text-align:right;margin-top:.25rem}
+.section-label{
+  font-size:.75rem;font-weight:700;letter-spacing:.8px;text-transform:uppercase;
+  color:var(--muted);margin-bottom:.75rem;
+}
+hr.divider{border:none;border-top:1px solid var(--border);margin:1.2rem 0}
+
+/* Theme picker grid */
+.theme-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:.5rem}
+.theme-opt input[type=radio]{position:absolute;opacity:0;width:0;height:0}
+.theme-opt label{
+  display:flex;flex-direction:column;align-items:center;gap:.35rem;
+  padding:.6rem .5rem;border:2px solid var(--border);border-radius:9px;cursor:pointer;
+  background:#12141e;text-align:center;transition:all .18s;
+}
+.theme-opt label:hover{border-color:var(--accent)}
+.theme-opt input:checked + label{border-color:var(--accent);background:rgba(124,92,252,.08)}
+.theme-swatches{display:flex;gap:3px}
+.sw{width:16px;height:16px;border-radius:50%}
+.theme-opt-name{font-size:.75rem;font-weight:600;line-height:1.2}
+.theme-opt-desc{font-size:.65rem;color:var(--muted);line-height:1.3}
+.auto-tag{
+  background:linear-gradient(135deg,#7c5cfc,#f5a623);
+  color:#fff;font-size:.65rem;font-weight:700;padding:1px 7px;border-radius:999px;
+}
+
+.btn-cancel{
+  padding:.6rem 1.1rem;border:1px solid var(--border);border-radius:8px;
+  background:transparent;color:var(--muted);font-size:.88rem;font-weight:600;cursor:pointer;transition:all .18s;
+}
+.btn-cancel:hover{border-color:#4a4d60;color:var(--text)}
+.modal-status{
+  border-radius:7px;padding:.65rem .85rem;font-size:.83rem;margin-top:.75rem;display:none;
+  align-items:center;gap:.6rem;
+}
+.modal-status.info{display:flex;background:rgba(124,92,252,.1);border:1px solid rgba(124,92,252,.25);color:#a78bfa}
+.modal-status.error{display:flex;background:rgba(239,83,80,.1);border:1px solid rgba(239,83,80,.3);color:#ef9a9a}
+
+/* ═══════════════ SETTINGS ═══════════════ */
+.settings-grid{display:grid;gap:1.25rem;max-width:600px}
+.settings-card{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1.5rem;
+}
+.settings-card h3{font-size:1rem;font-weight:700;margin-bottom:1.1rem;
+  padding-bottom:.7rem;border-bottom:1px solid var(--border)}
+.key-input-wrap{display:flex;gap:.5rem}
+.key-input-wrap input{flex:1}
+.btn-icon{
+  padding:.65rem .85rem;border:1px solid var(--border);border-radius:8px;
+  background:transparent;color:var(--muted);cursor:pointer;font-size:.85rem;transition:all .18s;white-space:nowrap;
+}
+.btn-icon:hover{border-color:var(--accent);color:var(--text)}
+.settings-actions{display:flex;gap:.6rem;margin-top:1rem}
+.btn-save{
+  padding:.6rem 1.2rem;border:none;border-radius:8px;
+  background:linear-gradient(135deg,#7c5cfc,#5b3fd4);color:#fff;
+  font-size:.88rem;font-weight:700;cursor:pointer;transition:opacity .2s;
+}
+.btn-save:hover{opacity:.88}
+.btn-save:disabled{opacity:.5;cursor:not-allowed}
+.settings-info{font-size:.8rem;color:var(--muted);line-height:1.5;margin-top:.5rem}
+.settings-status{font-size:.82rem;padding:.4rem .7rem;border-radius:6px;display:none}
+.settings-status.ok{display:block;background:rgba(76,175,125,.1);color:#4caf7d}
+.settings-status.err{display:block;background:rgba(239,83,80,.1);color:#ef9a9a}
+</style>
+</head>
+<body>
+
+<!-- ══════════════ LOGIN PAGE ══════════════ -->
+<div id="loginPage" class="page active">
+  <div class="login-box">
+    <div class="login-logo">
+      <span class="icon">⚡</span>
+      <h1>AI PPT Generator</h1>
+      <p>Powered by Groq · Llama 4 Scout</p>
+    </div>
+    <div id="loginError" class="login-error"></div>
+    <form id="loginForm">
+      <div class="form-field">
+        <label for="loginUser">Email</label>
+        <input id="loginUser" type="email" placeholder="Enter your email" autocomplete="username" required/>
+      </div>
+      <div class="form-field">
+        <label for="loginPass">Password</label>
+        <input id="loginPass" type="password" placeholder="Enter your password" autocomplete="current-password" required/>
+      </div>
+      <button type="submit" class="btn-primary" id="loginBtn">Sign In</button>
+    </form>
+  </div>
+</div>
+
+<!-- ══════════════ APP PAGE ══════════════ -->
+<div id="appPage" class="page" style="flex-direction:column">
+
+  <!-- Navbar -->
+  <nav class="navbar">
+    <a class="navbar-brand" href="#" onclick="showView('dashboard');return false">⚡ AI PPT Generator</a>
+    <div class="navbar-nav">
+      <button class="nav-btn active" id="navDashboard" onclick="showView('dashboard')">
+        📊 Dashboard
+      </button>
+      <button class="nav-btn" id="navSettings" onclick="showView('settings')">
+        ⚙️ Settings
+      </button>
+    </div>
+    <div class="navbar-right">
+      <div class="user-chip">
+        <div class="avatar" id="userAvatar">?</div>
+        <span id="userLabel">User</span>
+      </div>
+      <button class="logout-btn" onclick="logout()" title="Log out">↩ Logout</button>
+    </div>
+  </nav>
+
+  <!-- Content -->
+  <div class="app-content">
+
+    <!-- ── Dashboard view ── -->
+    <div id="view-dashboard" class="view active">
+      <div class="view-header">
+        <div>
+          <h2>My Presentations</h2>
+          <p>Generate, track, and download your AI-powered slide decks</p>
+        </div>
+        <button class="btn-new" onclick="openNewModal()">＋ New Presentation</button>
+      </div>
+      <div id="jobsGrid" class="jobs-grid"></div>
+    </div>
+
+    <!-- ── Settings view ── -->
+    <div id="view-settings" class="view">
+      <div class="view-header">
+        <div>
+          <h2>Settings</h2>
+          <p>Configure API keys and account preferences</p>
+        </div>
+      </div>
+      <div class="settings-grid">
+
+        <!-- API Key card -->
+        <div class="settings-card">
+          <h3>🔑 Groq API Key</h3>
+          <div class="field">
+            <label>API Key</label>
+            <div class="key-input-wrap">
+              <input type="password" id="apiKeyInput" placeholder="gsk_…"/>
+              <button class="btn-icon" onclick="toggleKeyVisibility()">👁 Show</button>
+            </div>
+            <p class="settings-info">
+              Your key is stored only in this browser's localStorage and sent with each request.
+              Leave blank to use the default built-in key.
+            </p>
+          </div>
+          <div class="settings-actions">
+            <button class="btn-save" onclick="saveApiKey()">Save Key</button>
+            <button class="btn-icon" onclick="testApiKey()">🔌 Test Connection</button>
+            <button class="btn-icon" onclick="clearApiKey()" style="color:var(--error)">✕ Clear</button>
+          </div>
+          <div id="apiKeyStatus" class="settings-status"></div>
+        </div>
+
+
+      </div>
+    </div>
+
+  </div><!-- /app-content -->
+</div><!-- /appPage -->
+
+<!-- ══════════════ NEW PPT MODAL ══════════════ -->
+<div id="newModal" class="modal-overlay" onclick="handleModalOverlayClick(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h3>⚡ New Presentation</h3>
+      <button class="modal-close" onclick="closeNewModal()">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="field">
+        <label for="f-title">Project Title <span style="color:var(--error)">*</span></label>
+        <input id="f-title" type="text" placeholder="e.g. AI-Powered Resume Screener Using NLP"/>
+        <div class="char-count"><span id="f-title-count">0</span> chars</div>
+      </div>
+
+      <div class="field">
+        <label for="f-desc">Project Description <span style="color:var(--error)">*</span></label>
+        <textarea id="f-desc" placeholder="Describe your project — what it does, how it works, the problem it solves. More detail = better slides."></textarea>
+        <div class="char-count"><span id="f-desc-count">0</span> chars</div>
+      </div>
+
+      <div class="field">
+        <label for="f-tech">Technologies Used <span class="opt">(optional)</span></label>
+        <input id="f-tech" type="text" placeholder="e.g. Python, Flask, TensorFlow, React, MongoDB"/>
+      </div>
+
+      <div class="field">
+        <label for="f-video">Demo Video URL <span class="opt">(optional — YouTube screenshots auto-captured)</span></label>
+        <input id="f-video" type="url" placeholder="https://youtube.com/watch?v=…"/>
+      </div>
+
+      <hr class="divider"/>
+      <div class="section-label">Brand Color Theme</div>
+      <div id="themeGrid" class="theme-grid">
+        <!-- populated by JS -->
+      </div>
+
+      <div id="modalStatus" class="modal-status"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeNewModal()">Cancel</button>
+      <button class="btn-primary" id="generateBtn" style="width:auto;padding:.6rem 1.4rem" onclick="submitGenerate()">
+        ⚡ Generate PPT
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════
+//  STATE
+// ════════════════════════════════════════════
+const activeSSEs = new Map(); // jobId → EventSource
+let selectedTheme = "auto";
+
+// ════════════════════════════════════════════
+//  AUTH  (hardcoded credentials)
+// ════════════════════════════════════════════
+const ADMIN_EMAIL = "admin@codeaj.com";
+const ADMIN_PASS  = "@J@y2263";
+
+function isLoggedIn() {
+  return localStorage.getItem("pptgen_session") === "1";
+}
+function logout() {
+  localStorage.removeItem("pptgen_session");
+  showPage("login");
+}
+
+document.getElementById("loginForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const email    = document.getElementById("loginUser").value.trim().toLowerCase();
+  const password = document.getElementById("loginPass").value;
+  if (email === ADMIN_EMAIL && password === ADMIN_PASS) {
+    localStorage.setItem("pptgen_session", "1");
+    initApp();
+  } else {
+    showLoginError("Incorrect email or password.");
+  }
+});
+
+function showLoginError(msg) {
+  const el = document.getElementById("loginError");
+  el.textContent = msg;
+  el.classList.add("show");
+}
+
+// ════════════════════════════════════════════
+//  PAGE / VIEW ROUTING
+// ════════════════════════════════════════════
+function showPage(name) {
+  document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+  document.getElementById(name + "Page").classList.add("active");
+}
+
+function showView(name) {
+  document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+  document.getElementById("view-" + name).classList.add("active");
+  document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
+  const nb = document.getElementById("nav" + name.charAt(0).toUpperCase() + name.slice(1));
+  if (nb) nb.classList.add("active");
+}
+
+// ════════════════════════════════════════════
+//  APP INIT
+// ════════════════════════════════════════════
+async function initApp() {
+  showPage("app");
+  document.getElementById("userLabel").textContent = ADMIN_EMAIL;
+  document.getElementById("userAvatar").textContent = "A";
+  // Load API key from localStorage into settings field
+  const savedKey = localStorage.getItem("pptgen_api_key") || "";
+  document.getElementById("apiKeyInput").value = savedKey;
+
+  await loadThemes();
+  await syncAndRender();
+}
+
+// ════════════════════════════════════════════
+//  THEME LOADER
+// ════════════════════════════════════════════
+async function loadThemes() {
+  const grid = document.getElementById("themeGrid");
+  grid.innerHTML = `
+    <div class="theme-opt">
+      <input type="radio" name="theme" id="th-auto" value="auto" checked/>
+      <label for="th-auto">
+        <span class="auto-tag">AUTO</span>
+        <span class="theme-opt-name">Auto Detect</span>
+        <span class="theme-opt-desc">AI picks best theme</span>
+      </label>
+    </div>`;
+  try {
+    const themes = await fetch("/themes").then(r => r.json());
+    themes.forEach(t => {
+      const d = document.createElement("div");
+      d.className = "theme-opt";
+      d.innerHTML = `
+        <input type="radio" name="theme" id="th-${t.key}" value="${t.key}"/>
+        <label for="th-${t.key}">
+          <div class="theme-swatches">
+            <div class="sw" style="background:${t.primaryHex}"></div>
+            <div class="sw" style="background:${t.accentHex}"></div>
+          </div>
+          <span class="theme-opt-name">${t.name}</span>
+          <span class="theme-opt-desc">${t.description}</span>
+        </label>`;
+      grid.appendChild(d);
+    });
+  } catch(e) { console.error("Theme load failed:", e); }
+  grid.addEventListener("change", e => { if (e.target.name === "theme") selectedTheme = e.target.value; });
+}
+
+// ════════════════════════════════════════════
+//  JOB STORAGE (localStorage)
+// ════════════════════════════════════════════
+function getLocalJobs() { return JSON.parse(localStorage.getItem("pptgen_jobs") || "[]"); }
+function saveLocalJobs(jobs) { localStorage.setItem("pptgen_jobs", JSON.stringify(jobs)); }
+
+function upsertLocalJob(jobData) {
+  const jobs = getLocalJobs();
+  const idx = jobs.findIndex(j => j.id === jobData.id);
+  if (idx >= 0) jobs[idx] = { ...jobs[idx], ...jobData };
+  else jobs.unshift(jobData);
+  saveLocalJobs(jobs);
+}
+
+function removeLocalJob(jobId) {
+  saveLocalJobs(getLocalJobs().filter(j => j.id !== jobId));
+}
+
+// ════════════════════════════════════════════
+//  SERVER SYNC
+// ════════════════════════════════════════════
+async function syncAndRender() {
+  try {
+    const serverJobs = await fetch("/jobs").then(r => r.json());
+    const serverMap = Object.fromEntries(serverJobs.map(j => [j.id, j]));
+    const localJobs = getLocalJobs();
+
+    localJobs.forEach(job => {
+      const sj = serverMap[job.id];
+      if (!sj) {
+        // Server lost this job (restarted)
+        if (job.status === "running" || job.status === "pending") {
+          job.status = "error";
+          job.progress = 0;
+          job.message = "⚠️ Server restarted — generation was interrupted.";
+        }
+      } else {
+        // Sync state from server
+        job.status   = sj.status;
+        job.progress = sj.progress;
+        job.message  = sj.message;
+        job.hasFile  = sj.hasFile;
+        // Reconnect SSE for still-running jobs
+        if (sj.status === "running" && !activeSSEs.has(job.id)) {
+          connectSSE(job.id);
+        }
+      }
+    });
+    saveLocalJobs(localJobs);
+  } catch(e) { console.warn("Sync failed:", e); }
+  renderJobs();
+}
+
+// ════════════════════════════════════════════
+//  SSE
+// ════════════════════════════════════════════
+function connectSSE(jobId) {
+  if (activeSSEs.has(jobId)) return;
+  const es = new EventSource(`/progress/${jobId}`);
+  activeSSEs.set(jobId, es);
+  es.onmessage = e => {
+    const data = JSON.parse(e.data);
+    updateJobCard(jobId, data);
+    upsertLocalJob({ id: jobId, status: data.status, progress: data.progress,
+      message: data.message, hasFile: data.status === "complete" });
+    if (data.status === "complete" || data.status === "error") {
+      es.close(); activeSSEs.delete(jobId);
+    }
+  };
+  es.onerror = () => { es.close(); activeSSEs.delete(jobId); };
+}
+
+// ════════════════════════════════════════════
+//  RENDER JOBS
+// ════════════════════════════════════════════
+function renderJobs() {
+  const jobs = getLocalJobs();
+  const grid = document.getElementById("jobsGrid");
+  if (!jobs.length) {
+    grid.innerHTML = `
+      <div class="empty-state">
+        <div class="es-icon">📂</div>
+        <h3>No presentations yet</h3>
+        <p>Click <strong>+ New Presentation</strong> to generate your first AI-powered slide deck.</p>
+      </div>`;
+    return;
+  }
+  grid.innerHTML = jobs.map(renderCard).join("");
+}
+
+function renderCard(job) {
+  const ago    = timeAgo(job.createdAt);
+  const isRun  = job.status === "running" || job.status === "pending";
+  const isDone = job.status === "complete" && job.hasFile;
+  const isErr  = job.status === "error";
+  const pct    = job.progress || 0;
+  const fillCls= isErr ? "error" : (isDone ? "complete" : "");
+  const themeInfo = getThemeInfo(job.themeKey);
+
+  return `<div class="job-card" id="job-${job.id}">
+    <div class="job-card-top">
+      <div class="job-title">${esc(job.title)}</div>
+      <button class="job-delete" onclick="deleteJob('${job.id}')" title="Delete">✕</button>
+    </div>
+    <div class="job-meta">
+      <span class="theme-chip">
+        <span class="theme-dot" style="background:#${themeInfo.primary}"></span>
+        ${esc(themeInfo.name)}
+      </span>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-bar">
+        <div class="progress-fill ${fillCls}" style="width:${pct}%" id="pf-${job.id}"></div>
+      </div>
+      <span class="progress-pct" id="pp-${job.id}">${pct}%</span>
+    </div>
+    <div class="progress-msg" id="pm-${job.id}">${esc(job.message || "")}</div>
+    <div class="job-footer">
+      <span class="status-badge status-${job.status}" id="sb-${job.id}">${statusLabel(job.status, isRun)}</span>
+      <span class="time-ago">${ago}</span>
+    </div>
+    <button class="btn-download ${isDone ? "" : "hidden"}" id="dl-${job.id}" onclick="downloadJob('${job.id}')">
+      ⬇ Download PPTX
+    </button>
+  </div>`;
+}
+
+function updateJobCard(jobId, data) {
+  const pf = document.getElementById("pf-" + jobId);
+  const pp = document.getElementById("pp-" + jobId);
+  const pm = document.getElementById("pm-" + jobId);
+  const sb = document.getElementById("sb-" + jobId);
+  const dl = document.getElementById("dl-" + jobId);
+  if (!pf) return;
+
+  const isErr  = data.status === "error";
+  const isDone = data.status === "complete";
+  const isRun  = data.status === "running";
+
+  pf.style.width = data.progress + "%";
+  pf.className   = "progress-fill" + (isErr ? " error" : isDone ? " complete" : "");
+  if (pp) pp.textContent = data.progress + "%";
+  if (pm) pm.textContent = data.message || "";
+  if (sb) { sb.className = "status-badge status-" + data.status; sb.innerHTML = statusLabel(data.status, isRun); }
+  if (dl) { dl.classList.toggle("hidden", !isDone); }
+}
+
+// ════════════════════════════════════════════
+//  ACTIONS
+// ════════════════════════════════════════════
+async function submitGenerate() {
+  const title = document.getElementById("f-title").value.trim();
+  const desc  = document.getElementById("f-desc").value.trim();
+  const tech  = document.getElementById("f-tech").value.trim();
+  const video = document.getElementById("f-video").value.trim();
+
+  if (!title || !desc) { setModalStatus("error", "⚠️ Title and description are required."); return; }
+
+  const btn = document.getElementById("generateBtn");
+  btn.disabled = true;
+  btn.textContent = "⏳ Starting…";
+  setModalStatus("info", "🚀 Submitting job to server…");
+
+  try {
+    const apiKey = localStorage.getItem("pptgen_api_key") || "";
+    const headers = { "Content-Type": "application/json" };
+    if (apiKey) headers["X-Groq-Api-Key"] = apiKey;
+
+    const res = await fetch("/generate", {
+      method: "POST", headers,
+      body: JSON.stringify({ title, description: desc, technologies: tech,
+        demoVideo: video, colorTheme: selectedTheme })
+    });
+    if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
+    const { jobId, themeKey } = await res.json();
+
+    upsertLocalJob({ id: jobId, title, themeKey, status: "running",
+      progress: 0, message: "Starting…", hasFile: false, createdAt: Date.now() });
+    renderJobs();
+    connectSSE(jobId);
+
+    closeNewModal();
+    showView("dashboard");
+  } catch (err) {
+    setModalStatus("error", "❌ " + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "⚡ Generate PPT";
+  }
+}
+
+function downloadJob(jobId) {
+  window.location.href = `/download/${jobId}`;
+}
+
+async function deleteJob(jobId) {
+  removeLocalJob(jobId);
+  renderJobs();
+  fetch(`/jobs/${jobId}`, { method: "DELETE" }).catch(() => {});
+  const es = activeSSEs.get(jobId);
+  if (es) { es.close(); activeSSEs.delete(jobId); }
+}
+
+// ════════════════════════════════════════════
+//  MODAL
+// ════════════════════════════════════════════
+function openNewModal() {
+  document.getElementById("newModal").classList.add("open");
+  document.getElementById("modalStatus").style.display = "none";
+  document.getElementById("generateBtn").disabled = false;
+  document.getElementById("generateBtn").textContent = "⚡ Generate PPT";
+}
+function closeNewModal() {
+  document.getElementById("newModal").classList.remove("open");
+}
+function handleModalOverlayClick(e) {
+  if (e.target === document.getElementById("newModal")) closeNewModal();
+}
+function setModalStatus(type, msg) {
+  const el = document.getElementById("modalStatus");
+  el.className = "modal-status " + type;
+  el.textContent = msg;
+}
+
+// ════════════════════════════════════════════
+//  SETTINGS
+// ════════════════════════════════════════════
+function toggleKeyVisibility() {
+  const inp = document.getElementById("apiKeyInput");
+  const btn = inp.nextElementSibling;
+  if (inp.type === "password") { inp.type = "text";     btn.textContent = "🙈 Hide"; }
+  else                         { inp.type = "password"; btn.textContent = "👁 Show"; }
+}
+
+function saveApiKey() {
+  const key = document.getElementById("apiKeyInput").value.trim();
+  if (key) localStorage.setItem("pptgen_api_key", key);
+  else     localStorage.removeItem("pptgen_api_key");
+  showSettingsStatus("apiKeyStatus", "ok", "✅ API key saved.");
+}
+
+function clearApiKey() {
+  document.getElementById("apiKeyInput").value = "";
+  localStorage.removeItem("pptgen_api_key");
+  showSettingsStatus("apiKeyStatus", "ok", "🗑 API key cleared. Using built-in default.");
+}
+
+async function testApiKey() {
+  const key = document.getElementById("apiKeyInput").value.trim();
+  showSettingsStatus("apiKeyStatus", "ok", "⏳ Testing connection…");
+  try {
+    const headers = { "Content-Type": "application/json" };
+    if (key) headers["X-Groq-Api-Key"] = key;
+    const res = await fetch("/test-api-key", { method: "POST", headers });
+    const data = await res.json();
+    if (data.ok) showSettingsStatus("apiKeyStatus", "ok", "✅ Connection successful! API key is valid.");
+    else         showSettingsStatus("apiKeyStatus", "err", "❌ " + data.error);
+  } catch(e) { showSettingsStatus("apiKeyStatus", "err", "❌ Request failed: " + e.message); }
+}
+
+
+function showSettingsStatus(id, cls, msg) {
+  const el = document.getElementById(id);
+  el.className = "settings-status " + cls;
+  el.textContent = msg;
+  setTimeout(() => { el.className = "settings-status"; el.textContent = ""; }, 5000);
+}
+
+// ════════════════════════════════════════════
+//  UTILS
+// ════════════════════════════════════════════
+const THEMES_CACHE = {};
+async function ensureThemesCache() {
+  if (Object.keys(THEMES_CACHE).length) return;
+  try {
+    const t = await fetch("/themes").then(r => r.json());
+    t.forEach(th => { THEMES_CACHE[th.key] = th; });
+  } catch(_) {}
+}
+
+function getThemeInfo(key) {
+  if (THEMES_CACHE[key]) return { name: THEMES_CACHE[key].name, primary: THEMES_CACHE[key].primaryHex.slice(1) };
+  return { name: key || "Auto", primary: "7c5cfc" };
+}
+
+function statusLabel(status, isRun) {
+  if (isRun || status === "running") return `<span class="spinner"></span> In Progress`;
+  if (status === "pending")  return "⏳ Pending";
+  if (status === "complete") return "✅ Complete";
+  if (status === "error")    return "❌ Error";
+  return status;
+}
+
+function timeAgo(ts) {
+  const diff = Date.now() - ts;
+  if (diff < 60000)    return "just now";
+  if (diff < 3600000)  return Math.floor(diff / 60000) + "m ago";
+  if (diff < 86400000) return Math.floor(diff / 3600000) + "h ago";
+  return Math.floor(diff / 86400000) + "d ago";
+}
+
+function esc(str) {
+  return String(str || "")
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;");
+}
+
+// Char counters
+["f-title","f-desc"].forEach(id => {
+  document.getElementById(id)?.addEventListener("input", function() {
+    document.getElementById(id + "-count").textContent = this.value.length;
+  });
+});
+
+// ════════════════════════════════════════════
+//  BOOT
+// ════════════════════════════════════════════
+(async function boot() {
+  await ensureThemesCache();
+  if (isLoggedIn()) {
+    initApp();
+  }
+  // auto-refresh time-ago labels every minute
+  setInterval(() => {
+    document.querySelectorAll(".time-ago").forEach(el => {
+      const card = el.closest(".job-card");
+      if (!card) return;
+      const jobId = card.id.replace("job-","");
+      const job = getLocalJobs().find(j => j.id === jobId);
+      if (job) el.textContent = timeAgo(job.createdAt);
+    });
+  }, 60000);
+})();
+</script>
+</body>
+</html>
