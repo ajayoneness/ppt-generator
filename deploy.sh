@@ -128,8 +128,16 @@ step "6 / 9 — npm install"
 npm install --silent --omit=dev
 log "Node dependencies installed"
 
-# Ensure Puppeteer's bundled Chromium is downloaded
-node -e "require('puppeteer')" 2>/dev/null || true
+# Install Puppeteer's bundled Chrome browser (required on VPS)
+log "Installing Puppeteer Chrome browser..."
+npx puppeteer browsers install chrome 2>/dev/null || \
+  node -e "const p=require('puppeteer');if(p.executablePath)console.log('Chrome at:',p.executablePath())" 2>/dev/null || true
+
+# Fallback: install system Chromium if Puppeteer Chrome install failed
+if ! npx puppeteer browsers list 2>/dev/null | grep -q "chrome"; then
+  warn "Puppeteer bundled Chrome not found — installing system chromium as fallback"
+  apt-get install -y -qq chromium-browser 2>/dev/null || apt-get install -y -qq chromium 2>/dev/null || true
+fi
 
 # Create output directory
 mkdir -p "$APP_DIR/output"

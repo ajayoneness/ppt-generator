@@ -41,15 +41,39 @@ async function extractYouTubeScreenshots(videoUrl, count = 4, onProgress = null)
   try {
     console.log(`[Screenshot] Launching headless browser for: ${videoUrl}`);
 
+    // Find Chrome/Chromium executable — try bundled Puppeteer first, then system
+    let executablePath;
+    try {
+      const { executablePath: bundled } = require("puppeteer");
+      executablePath = bundled();
+    } catch (_) {}
+    if (!executablePath) {
+      const systemPaths = [
+        "/usr/bin/google-chrome",
+        "/usr/bin/google-chrome-stable",
+        "/usr/bin/chromium-browser",
+        "/usr/bin/chromium",
+      ];
+      const fs2 = require("fs");
+      executablePath = systemPaths.find(p => { try { return fs2.existsSync(p); } catch(_){return false;} });
+    }
+
     browser = await puppeteer.launch({
-      headless: true,
+      headless: "new",
+      executablePath: executablePath || undefined,
       args: [
         "--no-sandbox",
         "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
         "--disable-gpu",
+        "--disable-accelerated-2d-canvas",
+        "--no-first-run",
+        "--no-zygote",
+        "--single-process",
         "--mute-audio",
         "--autoplay-policy=no-user-gesture-required",
         "--disable-blink-features=AutomationControlled",
+        "--window-size=1280,720",
       ],
     });
 
