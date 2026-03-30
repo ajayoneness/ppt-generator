@@ -63,12 +63,13 @@ async function extractYouTubeScreenshots(videoUrl, count = 4, onProgress = null)
 
   const base = `https://img.youtube.com/vi/${videoId}`;
 
-  // Each slot: ordered list of URLs to try until one succeeds
+  // Each slot: ordered list of URLs to try until one succeeds.
+  // Prioritize high-res variants — 1/2/3.jpg are only 120x90 and look blurry when upscaled.
   const slots = [
-    [`${base}/maxresdefault.jpg`, `${base}/sddefault.jpg`, `${base}/hqdefault.jpg`],
-    [`${base}/1.jpg`,             `${base}/hqdefault.jpg`, `${base}/mqdefault.jpg`],
-    [`${base}/2.jpg`,             `${base}/sddefault.jpg`, `${base}/mqdefault.jpg`],
-    [`${base}/3.jpg`,             `${base}/hqdefault.jpg`, `${base}/mqdefault.jpg`],
+    [`${base}/maxresdefault.jpg`, `${base}/sddefault.jpg`,  `${base}/hqdefault.jpg`],
+    [`${base}/sddefault.jpg`,     `${base}/maxresdefault.jpg`, `${base}/hqdefault.jpg`],
+    [`${base}/hqdefault.jpg`,     `${base}/sddefault.jpg`,  `${base}/maxresdefault.jpg`],
+    [`${base}/mqdefault.jpg`,     `${base}/hqdefault.jpg`,  `${base}/sddefault.jpg`],
   ];
 
   const base64Images = [];
@@ -76,7 +77,7 @@ async function extractYouTubeScreenshots(videoUrl, count = 4, onProgress = null)
   for (let i = 0; i < Math.min(count, slots.length); i++) {
     let result = null;
     for (const url of slots[i]) {
-      result = await fetchThumbnail(url, 1500);
+      result = await fetchThumbnail(url, 3000);
       if (result) break;
     }
 
